@@ -226,5 +226,78 @@ class CustomersController extends Controller
             }
             return $response;
         }
+
+    }
+    public function getItemProduct(Request $request, $id): JsonResponse
+    {
+//        if (!Auth::user()->hasPermission('can-read-roles')) {
+//            $response['success'] = false;
+//            $response['errors'][] = trans("vaahcms::messages.permission_denied");
+//
+//            return response()->json($response);
+//        }
+
+        try {
+            $response = Customer::getProduct($request, $id);
+        } catch (\Exception $e) {
+            $response = [];
+            $response['success'] = false;
+
+            if (env('APP_DEBUG')) {
+                $response['errors'][] = $e->getMessage();
+                $response['hint'][] = $e->getTrace();
+            } else {
+                $response['errors'][] = 'Something went wrong.';
+            }
+        }
+
+        return response()->json($response);
+    }
+    public function postActions(Request $request, $action) : JsonResponse
+    {
+        try {
+            $rules = array(
+                'inputs' => 'required',
+            );
+            $validator = \Validator::make( $request->all(), $rules);
+            if ( $validator->fails() ) {
+
+                $errors             = errorsToArray($validator->errors());
+                $response['success'] = false;
+                $response['errors'][] = $errors;
+                return response()->json($response);
+            }
+
+            $response = [];
+            $request->merge(['action'=>$action]);
+            switch ($action)
+            {
+                //------------------------------------
+                case 'toggle-product-active-status':
+
+                    $response = Customer::changeUserStatus($request);
+
+                    break;
+                //------------------------------------
+                case 'toggle-all-product-active-status':
+
+                    $response = Customer::bulkChangeUserStatus($request);
+
+                    break;
+                //------------------------------------
+            }
+        } catch (\Exception $e) {
+            $response = [];
+            $response['success'] = false;
+
+            if(env('APP_DEBUG')){
+                $response['errors'][] = $e->getMessage();
+                $response['hint'][] = $e->getTrace();
+            } else {
+                $response['errors'][] = 'Something went wrong.';
+            }
+        }
+
+        return response()->json($response);
     }
 
