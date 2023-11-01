@@ -259,19 +259,18 @@ class CustomersController extends Controller
             $rules = array(
                 'inputs' => 'required',
             );
-            $validator = \Validator::make( $request->all(), $rules);
-            if ( $validator->fails() ) {
+            $validator = \Validator::make($request->all(), $rules);
+            if ($validator->fails()) {
 
-                $errors             = errorsToArray($validator->errors());
+                $errors = errorsToArray($validator->errors());
                 $response['success'] = false;
                 $response['errors'][] = $errors;
                 return response()->json($response);
             }
 
             $response = [];
-            $request->merge(['action'=>$action]);
-            switch ($action)
-            {
+            $request->merge(['action' => $action]);
+            switch ($action) {
                 //------------------------------------
                 case 'toggle-product-active-status':
 
@@ -290,7 +289,7 @@ class CustomersController extends Controller
             $response = [];
             $response['success'] = false;
 
-            if(env('APP_DEBUG')){
+            if (env('APP_DEBUG')) {
                 $response['errors'][] = $e->getMessage();
                 $response['hint'][] = $e->getTrace();
             } else {
@@ -299,5 +298,5 @@ class CustomersController extends Controller
         }
 
         return response()->json($response);
-    }
+    }}
 

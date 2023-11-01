@@ -90,7 +90,50 @@ class Customer extends Model
         return $empty_item;
     }
 
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'pr_customers_products', 'customer_id', 'product_id')
+            ->withPivot(
+                'is_active',
+                'created_by',
+                'created_at',
+                'updated_by',
+                'updated_at'
+            );
+    }
+    public static function syncProductsWithCustomers()
+    {
+        $all_users = Product::select('id')->get()->pluck('id')->toArray();
+        $all_roles = self::select('id')->get();
 
+        if (!$all_roles) {
+            return false;
+        }
+
+        foreach ($all_roles as $role) {
+            $role->products()->syncWithoutDetaching($all_users);
+        }
+        return true;
+
+    }
+    public function activeProducts(): BelongsToMany
+    {
+        return $this->products()->wherePivot('is_active', 1);
+    }
+
+
+
+
+    public static function countProducts($id): int
+    {
+        $products = self::withTrashed()->where('id', $id)->first();
+
+        if (!$products) {
+            return 0;
+        }
+
+        return $products->products()->wherePivot('is_active', 1)->count();
+    }
     //-------------------------------------------------
 
     public function createdByUser()
