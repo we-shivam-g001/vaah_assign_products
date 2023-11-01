@@ -19,7 +19,7 @@ class Customer extends Model
 
     use SoftDeletes;
     use CrudWithUuidObservantTrait;
-
+    public array $matching_products = [];
     //-------------------------------------------------
     protected $table = 'pr_customers';
     //-------------------------------------------------

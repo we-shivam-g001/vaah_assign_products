@@ -64,6 +64,38 @@ class Product extends Model
             'deleted_by',
         ];
     }
+
+    public function customers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Customer::class, 'pr_customers_products',
+            'product_id', 'customer_id')
+            ->withPivot('is_active',
+                'created_by',
+                'created_at',
+                'updated_by',
+                'updated_at');
+    }
+    public static function syncProductsWithCustomers()
+    {
+        $all_products = Customer::select('id')->get()->pluck('id')->toArray();
+        $all_roles = self::select('id')->get();
+
+        if (!$all_roles) {
+            return false;
+        }
+
+        foreach ($all_roles as $role) {
+            $role->customers()->syncWithoutDetaching($all_products);
+        }
+        return true;
+
+    }
+    //-------------------------------------------------
+    public function activeProducts(): BelongsToMany
+    {
+        return $this->customers()->wherePivot('is_active', 1);
+    }
     //-------------------------------------------------
     public static function getFillableColumns()
     {
