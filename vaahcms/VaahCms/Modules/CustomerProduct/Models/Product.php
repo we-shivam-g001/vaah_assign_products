@@ -90,6 +90,7 @@ class Product extends Model
     }
 
 
+    
 
     //-------------------------------------------------
     public function scopeExclude($query, $columns)
