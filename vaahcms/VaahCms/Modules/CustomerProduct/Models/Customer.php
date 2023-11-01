@@ -333,9 +333,11 @@ class Customer extends Model
             $rows = $request->rows;
         }
 
+//        $list = $list->paginate($rows);
+
+        $list->withCount(['activeProducts']);
         $list = $list->paginate($rows);
-
-
+        $response['totalProduct'] = Product::all()->count();
 
 
         $response['success'] = true;
@@ -722,6 +724,148 @@ class Customer extends Model
     }
 
     //-------------------------------------------------
+    public static function getProduct($request, $id): array
+    {
+        $item = self::withTrashed()->where('id', $id)->first();
+        $response['data']['item'] = $item;
 
+        if ($request->has("q")) {
+            $matching_products = $item->products()
+                ->where(function ($q) use ($request) {
+                    $q->where('name', 'LIKE', '%' . $request->q . '%');
+
+                })
+                ->pluck('pr_products.id')
+                ->toArray();
+
+        } else {
+            $matching_products = $item->products()
+                ->pluck('pr_products.id')
+                ->toArray();
+        }
+
+
+        $rows = config('vaahcms.per_page');
+
+        if ($request->has('rows')) {
+            $rows = $request->rows;
+        }
+
+        $list = $item->products()
+            ->whereIn('pr_products.id', $matching_products)
+            ->orderBy('pivot_is_active', 'desc')
+            ->paginate($rows);
+
+
+        foreach ($list as $user) {
+            $data = self::getPivotData($user->pivot);
+
+            $user['json'] = $data;
+            $user['json_length'] = count($data);
+        }
+
+
+        $response['data']['list'] = $list;
+        $response['data']['matching_product_ids'] = $matching_products;
+        $response['success'] = true;
+        return $response;
+
+    }
+
+
+
+    public static function getPivotData($pivot): array
+    {
+
+        $data = array();
+
+        if ($pivot->created_by ) {
+            $data['created_by'] = User::find($pivot->created_by)->name;
+        }
+
+        if ($pivot->updated_by ) {
+            $data['updated_by'] = User::find($pivot->updated_by)->name;
+        }
+
+        if ($pivot->created_at) {
+            $data['created_at'] = date('d-m-Y H:i:s', strtotime($pivot->created_at));
+        }
+
+        if ($pivot->updated_at) {
+            $data['updated_at'] = date('d-m-Y H:i:s', strtotime($pivot->updated_at));
+        }
+
+        return $data;
+
+    }
+    public static function changeUserStatus($request): array
+    {
+
+        $inputs = $request->all();
+        $item = self::find($inputs['inputs']['id']);
+        $data = [
+            'is_active' => $inputs['data']['is_active'],
+            'updated_by' => Auth::user()->id,
+            'updated_at' => \Illuminate\Support\Carbon::now()
+        ];
+
+        if ($inputs['inputs']['product_id']) {
+            $pivot = $item->products->find($inputs['inputs']['product_id'])->pivot;
+            if ($pivot->is_active === null || !$pivot->created_by) {
+                $data['created_at'] = Carbon::now();
+            }
+            $item->products()->updateExistingPivot(
+                $inputs['inputs']['product_id'],
+                $data
+            );
+        } else {
+            $item->products()
+                ->newPivotStatement()
+                ->where('product_id', '=', $item->id)
+                ->update($data);
+
+
+        }
+        $response['success'] = true;
+        $response['data'] = [];
+
+
+        return $response;
+
+
+    }
+    //-------------------------------------------------
+    public static function bulkChangeUserStatus($request): array
+    {
+        $inputs = $request->get('inputs');
+
+//        dd($inputs);
+
+        $data = $request->get('data');
+        $response = ['success' => true, 'data' => []];
+
+        if (isset($inputs['id'])) {
+            $item = self::find($inputs['id']);
+            $product_ids = $inputs['product_id'];
+
+            foreach ($product_ids as $product_id) {
+                $pivot = $item->products->find($product_id)->pivot;
+                $update_data = [
+                    'is_active' => $data['is_active'],
+                    'updated_by' => Auth::user()->id,
+                    'updated_at' => \Illuminate\Support\Carbon::now(),
+                ];
+
+                if ($pivot->is_active === null || !$pivot->created_by) {
+                    $update_data['created_by'] = Auth::user()->id;
+                    $update_data['created_at'] = Carbon::now();
+                }
+
+                $item->products()->updateExistingPivot($product_id, $update_data);
+            }
+        }
+
+        return $response;
+    }
 
 }

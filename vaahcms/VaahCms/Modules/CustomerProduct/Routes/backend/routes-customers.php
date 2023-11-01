@@ -71,5 +71,9 @@ function () {
         ->name('vh.backend.customerproduct.customers.item.action');
 
     //---------------------------------------------------------
+    Route::get('/item/{id}/products', 'CustomersController@getItemProduct')
+        ->name('backend.vaah.customers.item.products');
 
+    Route::post('/actions/{action_name}', 'CustomersController@postActions')
+        ->name('backend.vaah.products.actions');
 });
