@@ -24,6 +24,12 @@ routes_list = {
             component: Item,
             props: true,
         },
+        {
+            path: 'product/:id?',
+            name: 'customers.products',
+            component: ViewProduct,
+            props: true,
+        },
 
     ]
 };
